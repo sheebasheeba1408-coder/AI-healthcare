@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: hms_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: hmsroot123
+      MYSQL_DATABASE: hospital_db
+      MYSQL_USER: hmsuser
+      MYSQL_PASSWORD: hmspass123
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  php:
+    build: .
+    container_name: hms_php
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./:/var/www/html
+    ports:
+      - "8080:80"
+    environment:
+      DB_HOST: db
+      DB_NAME: hospital_db
+      DB_USER: hmsuser
+      DB_PASS: hmspass123
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: hms_phpmyadmin
+    restart: always
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      PMA_USER: hmsuser
+      PMA_PASSWORD: hmspass123
+    ports:
+      - "8081:80"
+
+volumes:
+  mysql_data:
